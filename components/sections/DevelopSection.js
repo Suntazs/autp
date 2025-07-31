@@ -48,12 +48,12 @@ const DevelopSection = forwardRef(({ isSelected, sectionProgress }, ref) => {
                 {/* Code Content */}
                 <div className="p-4 text-sm font-mono">
                   <div className="space-y-1">
-                    <div className="text-purple-400">import React from 'react';</div>
-                    <div className="text-blue-400">import './App.css';</div>
+                    <div className="text-purple-400">import React from &apos;react&apos;;</div>
+                    <div className="text-blue-400">import &apos;./App.css&apos;;</div>
                     <div className="text-gray-500"></div>
                     <div className="text-orange-400">function <span className="text-yellow-300">App</span>() {'{{'}</div>
                     <div className="text-pink-400 ml-4">return (</div>
-                    <div className="text-gray-300 ml-8">&lt;<span className="text-red-400">div</span> <span className="text-green-400">className</span>=<span className="text-yellow-300">"app"</span>&gt;</div>
+                    <div className="text-gray-300 ml-8">&lt;<span className="text-red-400">div</span> <span className="text-green-400">className</span>=<span className="text-yellow-300">&quot;app&quot;</span>&gt;</div>
                     <div className="text-gray-300 ml-12">&lt;<span className="text-red-400">h1</span>&gt;Hello World&lt;/<span className="text-red-400">h1</span>&gt;</div>
                     <div className="text-gray-300 ml-8">&lt;/<span className="text-red-400">div</span>&gt;</div>
                     <div className="text-pink-400 ml-4">);</div>

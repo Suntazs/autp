@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import ButtonDefault from "@/components/ui/buttons/buttondefult";
 import BookMeeting from "@/components/layout/popups/book-meeting";
 
-const meeting = () => {
+const Meeting = () => {
   const circleRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -39,7 +39,7 @@ const meeting = () => {
       {/* Content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10 px-4">
         <h1 className="text-4xl md:text-6xl font-bold mb-4">
-          Let's Connect
+          Let&apos;s Connect
         </h1>
         <p className="text-lg md:text-xl mb-8 max-w-2xl">
           Ready to transform your ideas into reality? Schedule a meeting with our team 
@@ -62,4 +62,4 @@ const meeting = () => {
   )
 }
 
-export default meeting
+export default Meeting
