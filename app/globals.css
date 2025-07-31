@@ -137,3 +137,28 @@ body {
   animation: revealHeading 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s
     forwards;
 }
+
+/* Elegant scrollbar styles */
+.elegant-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.elegant-scrollbar::-webkit-scrollbar-track {
+  background: rgba(63, 63, 70, 0.3);
+  border-radius: 3px;
+}
+
+.elegant-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--primary-green);
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.elegant-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-green);
+  opacity: 0.8;
+}
+
+.elegant-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
