@@ -42,7 +42,7 @@ export default function AboutSection() {
                </p>
               
               <p className="text-gray-600 text-lg leading-relaxed" style={{ fontFamily: "AnthroTrial, Arial, sans-serif" }}>
-                From customer service chatbots to automated marketing campaigns, we'll guide you through implementing cutting-edge AI solutions that work 24/7 to grow your business while you focus on what matters most.
+                From customer service chatbots to automated marketing campaigns, we&apos;ll guide you through implementing cutting-edge AI solutions that work 24/7 to grow your business while you focus on what matters most.
               </p>
             </div>
           </div>
