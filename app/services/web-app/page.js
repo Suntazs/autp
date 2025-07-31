@@ -113,12 +113,12 @@ export default function WebAppPage() {
           <div className="space-y-16">
             <div className="flex flex-col md:flex-row items-center gap-12">
               <div className="w-full md:w-1/2 order-2 md:order-1 text-left">
-                <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 max-w-md leading-tight">WEEK 1-2: REQUIREMENTS & STRATEGY</h3>
+                <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 max-w-md leading-tight">WEEK 1-2: REQUIREMENTS &amp; STRATEGY</h3>
                 <p className="text-lg md:text-xl text-gray-700 mb-4 md:mb-6">
                   We dive deep into your business goals and user needs. No generic solutions - every feature is designed to solve your specific challenges and drive measurable results.
                 </p>
                 <p className="text-base md:text-lg text-gray-600">
-                  We map out your user journeys, define technical requirements, and create a detailed project roadmap with clear milestones. You'll know exactly what to expect and when.
+                  We map out your user journeys, define technical requirements, and create a detailed project roadmap with clear milestones. You&apos;ll know exactly what to expect and when.
                 </p>
               </div>
               <div className="w-full md:w-1/2 order-1 md:order-2 flex justify-center">
@@ -130,7 +130,7 @@ export default function WebAppPage() {
               <div className="w-full md:w-1/2 flex justify-center">
               </div>
               <div className="w-full md:w-1/2 text-right">
-                <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 max-w-md ml-auto leading-tight">WEEK 3-4: DESIGN & USER TESTING</h3>
+                <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 max-w-md ml-auto leading-tight">WEEK 3-4: DESIGN &amp; USER TESTING</h3>
                 <p className="text-lg md:text-xl text-gray-700 mb-4 md:mb-6">
                   Beautiful interfaces that actually convert. We create designs that your users will love and that drive the actions you want them to take.
                 </p>
@@ -142,7 +142,7 @@ export default function WebAppPage() {
 
             <div className="flex flex-col md:flex-row items-center gap-12">
               <div className="w-full md:w-1/2 order-2 md:order-1 text-left">
-                <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 max-w-md leading-tight">WEEK 5-10: DEVELOPMENT & INTEGRATION</h3>
+                <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 max-w-md leading-tight">WEEK 5-10: DEVELOPMENT &amp; INTEGRATION</h3>
                 <p className="text-lg md:text-xl text-gray-700 mb-4 md:mb-6">
                   Fast, secure, and scalable development using proven technologies. We build in weekly sprints so you can see progress and provide feedback throughout.
                 </p>
@@ -159,7 +159,7 @@ export default function WebAppPage() {
 
               </div>
               <div className="w-full md:w-1/2 text-right">
-                <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 max-w-md ml-auto leading-tight">WEEK 11-12: LAUNCH & OPTIMIZATION</h3>
+                <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 max-w-md ml-auto leading-tight">WEEK 11-12: LAUNCH &amp; OPTIMIZATION</h3>
                 <p className="text-lg md:text-xl text-gray-700 mb-4 md:mb-6">
                   Smooth deployment with zero downtime. We handle everything from cloud setup to performance monitoring, so you can focus on your business.
                 </p>
