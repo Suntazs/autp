@@ -68,7 +68,7 @@ export default function TestimonialSection({
   return (
     <section 
       id={sectionId}
-      className="w-full max-w-[1600px] mx-auto px-0 md:px-8 lg:px-16 py-20"
+      className="w-full max-w-[1600px] mx-auto px-4 md:px-8 lg:px-16 py-16 md:py-20 lg:py-24 bg-white"
     >
       <div className="relative bg-gray-50 p-12 px-4 md:p-16 lg:p-20 overflow-hidden">
         {/* Background decoration */}

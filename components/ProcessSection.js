@@ -922,7 +922,9 @@ export default function ProcessSection() {
   };
 
   return (
-    <section className="w-full min-h-screen">
+    <section className="w-full max-w-[1600px] mx-auto px-4 md:px-8 lg:px-16 py-16 md:py-20 lg:py-24 bg-white">
+      {/* Process Steps */}
+
       {/* Mobile Category Bar */}
       <div className="md:hidden sticky top-20 z-[90] bg-black border-b border-gray-700/30 mb-4">
         <div className="w-full overflow-hidden">

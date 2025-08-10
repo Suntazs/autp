@@ -224,18 +224,20 @@ export function BlogSlider() {
   const [containerPadding, setContainerPadding] = useState('16px');
   const sliderRef = useRef(null);
 
-  // Available color themes
+  // Available color themes - order matters for deterministic generation
   const availableColors = ["green", "purple", "orange", "pink", "blue", "yellow"];
 
-  // Function to generate random colors with no adjacent duplicates
-  const generateRandomColors = (count) => {
+  // Function to generate deterministic colors with no adjacent duplicates
+  const generateDeterministicColors = (count) => {
     const colors = [];
     let lastColor = null;
     
+    // Use a seed-based approach for consistent colors
     for (let i = 0; i < count; i++) {
       let availableOptions = availableColors.filter(color => color !== lastColor);
-      const randomIndex = Math.floor(Math.random() * availableOptions.length);
-      const selectedColor = availableOptions[randomIndex];
+      // Use index-based selection instead of random for consistency
+      const selectedIndex = i % availableOptions.length;
+      const selectedColor = availableOptions[selectedIndex];
       colors.push(selectedColor);
       lastColor = selectedColor;
     }
@@ -296,8 +298,8 @@ export function BlogSlider() {
     }
   ];
 
-  // Generate random colors for posts (this will create new colors on each render)
-  const [randomColors] = useState(() => generateRandomColors(blogPosts.length));
+  // Generate deterministic colors for posts (consistent between server and client)
+  const [randomColors] = useState(() => generateDeterministicColors(blogPosts.length));
 
   // Check scroll position to show/hide arrows and update slide counter
   const checkScrollPosition = () => {
@@ -330,7 +332,10 @@ export function BlogSlider() {
 
   // Calculate container padding to match the website container positioning
   const calculateContainerPadding = () => {
-    if (typeof window === 'undefined') return '16px';
+    // Default padding for SSR
+    const defaultPadding = '16px';
+    
+    if (typeof window === 'undefined') return defaultPadding;
     
     const screenWidth = window.innerWidth;
     const maxContainerWidth = 1600;
@@ -354,6 +359,14 @@ export function BlogSlider() {
     return `${basePadding}px`;
   };
 
+  // Handle initial client-side setup
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsMobile(window.innerWidth < 768);
+      setContainerPadding(calculateContainerPadding());
+    }
+  }, []);
+
   // Set up scroll listener and handle responsive padding
   useEffect(() => {
     const slider = sliderRef.current;
@@ -370,10 +383,6 @@ export function BlogSlider() {
         setContainerPadding(calculateContainerPadding());
         setTimeout(checkScrollPosition, 100);
       };
-      
-      // Initial checks
-      setIsMobile(window.innerWidth < 768);
-      setContainerPadding(calculateContainerPadding());
       
       window.addEventListener('resize', handleResize);
 
@@ -450,7 +459,7 @@ export function BlogSlider() {
       >
         {blogPosts.map((post, index) => (
           <div 
-            key={index} 
+            key={`${post.title}-${index}`}
             className="flex-shrink-0 snap-center flex items-stretch"
             style={{ 
               width: isMobile ? '340px' : '540px', // Mobile-friendly size for cards
@@ -463,7 +472,7 @@ export function BlogSlider() {
               title={post.title}
               description={post.description}
               link={post.link}
-              colorTheme={randomColors[index]} // Use random colors
+              colorTheme={randomColors[index]} // Use deterministic colors
             />
           </div>
         ))}

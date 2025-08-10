@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
 // Color themes from BlogSlide component
 const colorThemes = {
@@ -37,12 +38,13 @@ const colorThemes = {
 };
 
 const RotatingFlower = ({ 
-  className, 
-  style, 
+  className = "", 
+  style = {}, 
   colorTheme = "black", // Can be number 1-6, "random", "black", or color name
   parallax = false, // Enable/disable parallax effect
   rotating = true, // Enable/disable rotation
-  fill = true // Enable fill mode (whole flower same color, defaults to black)
+  fill = true, // Enable fill mode (whole flower same color, defaults to black)
+  delay = 0 // Animation delay in seconds (default 0)
 }) => {
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -169,43 +171,78 @@ const RotatingFlower = ({
 
   if (!selectedTheme) return null;
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { 
+      scale: 0,
+      opacity: 0,
+      rotate: -180
+    },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      rotate: 0,
+      transition: {
+        type: "spring",
+        stiffness: 260,
+        damping: 20,
+        delay: delay / 1000, // Convert ms to seconds for framer-motion
+        duration: 0.8
+      }
+    }
+  };
+
+  const rotationVariants = {
+    animate: {
+      rotate: 360,
+      transition: {
+        duration: 20,
+        ease: "linear",
+        repeat: Infinity
+      }
+    }
+  };
+
   return (
-    <div 
-      className={`absolute -z-10 transition-transform duration-300 ease-out ${className}`}
+    <motion.div 
+      className={`${className || 'w-24 h-24'}`}
       style={{
         ...style,
+        position: 'absolute',
         transform: parallax && isHovered 
           ? `translate(${Math.max(-15, Math.min(15, mousePosition.x))}px, ${Math.max(-10, Math.min(10, mousePosition.y))}px)` 
-          : style?.transform || 'translate(0, 0)',
+          : undefined,
       }}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.1 }}
+      variants={containerVariants}
       data-flower-parallax={parallax}
     >
-      <div 
-        className={`relative w-full h-full ${rotating ? 'animate-spin' : ''}`} 
-        style={{ 
-          animationDuration: rotating ? '20s' : 'none',
-          animationPlayState: rotating ? 'running' : 'paused'
-        }}
+      <motion.div 
+        className="relative w-full h-full"
+        animate={rotating ? "animate" : undefined}
+        variants={rotating ? rotationVariants : undefined}
       >
         {/* Flower made of overlapping circles */}
         <div className="relative w-full h-full">
           {/* Center circle */}
           <div 
-            className="absolute top-1/2 left-1/2 w-8 h-8 rounded-full transform -translate-x-1/2 -translate-y-1/2 transition-colors duration-500" 
+            className="absolute top-1/2 left-1/2 w-12 h-12 rounded-full transform -translate-x-1/2 -translate-y-1/2" 
             style={{ backgroundColor: selectedTheme.accent }}
           />
           
           {/* Petals - 8 circles arranged in a flower pattern */}
           {Array.from({ length: 8 }).map((_, i) => {
             const angle = (i * 45) * (Math.PI / 180);
-            const radius = 24; // Distance from center
+            const radius = 36; // Distance from center
             const x = Math.cos(angle) * radius;
             const y = Math.sin(angle) * radius;
             
             return (
               <div
                 key={i}
-                className="absolute w-6 h-6 rounded-full transform -translate-x-1/2 -translate-y-1/2 transition-colors duration-500"
+                className="absolute w-9 h-9 rounded-full transform -translate-x-1/2 -translate-y-1/2"
                 style={{
                   left: `calc(50% + ${x}px)`,
                   top: `calc(50% + ${y}px)`,
@@ -215,8 +252,8 @@ const RotatingFlower = ({
             );
           })}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

@@ -1,10 +1,10 @@
 "use client";
 
 import WebAppHeroSection from "@/components/sections/WebAppHeroSection";
-import CurvedLoop from "@/components/sections/textslider";
 import Meeting from "@/components/meeting";
 import RotatingFlower from "@/components/ui/RotatingFlower";
 import { useState, useEffect } from "react";
+import TestimonialSection from "@/components/TestimonialSection";
 
 export default function WebAppPage() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -104,7 +104,7 @@ export default function WebAppPage() {
       </section>
 
       {/* Process Section */}
-      <section className="w-full relative bg-gray-50">
+      <section className="w-full relative">
         <div className="max-w-[1600px] px-4 md:px-8 lg:px-16  py-20 mx-auto">
           <h2 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-center mb-16 max-w-4xl mx-auto leading-tight">
             HOW LONG DOES WEB APP DEVELOPMENT TAKE?
@@ -171,6 +171,17 @@ export default function WebAppPage() {
           </div>
         </div>
       </section>
+      {/* First Testimonial - You can customize all these props */}
+      <TestimonialSection 
+        testimonialText="One of the best companies I have worked with. They are very professional and always deliver on time. And did more than asked."
+        highlightedText="always deliver on time"
+        companyLogo={null} // You can add a logo URL here like "/img/company-logo.png"
+        companyName="perplexity"
+        reviewerPicture="/img/an-elderly-man-with-gray-hair-and-wearing-glasses-.png"
+        reviewerName="Henry Modisett"
+        reviewerRole="Head of Design"
+        sectionId="testimonial-1"
+      />
 
       {/* CTA Section */}
       <Meeting />
