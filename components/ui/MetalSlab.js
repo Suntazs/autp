@@ -1,60 +1,55 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 
 export default function MetalSlab({
-  sectionHeight = 100,      // kept for backward-compat; not used in overlay mode
-  stickyWindowVh = 100,     // scroll window for the effect when using anchor
-  overshootPx = null,        // tiny bit past 100vh (progress only)
-  spins = 0.7,              // cap at 1.5 turns total
-  tiltDeg = { x: 16, z: 10 },// tilt kept gentle
-  retreatUpUnits = 1.2,     // slide up more
-  retreatBackUnits = 1.5,   // push back more
-  retreatScaleTo = 0.95,    // shrink a touch more
-  // Motion controls
-  stopAtPx = null,          // optional absolute px distance to stop the motion
-  stopAtProgress = 1,       // clamp 0..1; where along the progress to stop
-  overshootWindowProgress = 0.2, // 0..1 of progress past the stop used to overshoot+return
-  overshootYawDeg = 8,      // max extra yaw during overshoot (degrees)
-  // New: external anchor that defines the scroll window; slab itself is overlay
+  spins = 0.7,
+  tiltDeg = { x: 16, z: 10 },
+  retreatUpUnits = 1.2,
+  retreatBackUnits = 1.5,
+  retreatScaleTo = 0.95,
+  followDistance = 800,
   anchorRef = null,
-  className = "",
-  children, // accepted for backward-compat but not rendered in overlay mode
 }) {
-  const mountRef   = useRef(null);
-  const rendererRef = useRef(null);
-  const animationIdRef = useRef(null);
+  const mountRef = useRef(null);
+  const containerRef = useRef(null);
+  const [isMounted, setIsMounted] = useState(false);
 
+  // Ensure client-side only rendering
   useEffect(() => {
-    if (!mountRef.current) return;
+    setIsMounted(true);
+  }, []);
+
+  // 3D Scene Setup - Client-side only
+  useEffect(() => {
+    if (!isMounted || typeof window === 'undefined' || !mountRef.current || !anchorRef?.current) return;
+
+    // Get hero position once
+    const heroEl = anchorRef.current;
+    const heroRect = heroEl.getBoundingClientRect();
+    const heroTop = window.scrollY + heroRect.top;
+    const finishScrollY = heroTop + followDistance;
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    const { w, h } = getMountSize();
-    renderer.setSize(w, h);
+    renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.85;
-    renderer.physicallyCorrectLights = true;
 
-    // Ensure canvas never affects layout or input
     const canvas = renderer.domElement;
     canvas.style.position = "absolute";
     canvas.style.inset = "0";
-    canvas.style.display = "block";          // avoid inline-canvas baseline gap
-    canvas.style.pointerEvents = "none";     // never intercept scrolling/clicks
-
-    rendererRef.current = renderer;
+    canvas.style.pointerEvents = "none";
     mountRef.current.appendChild(canvas);
 
     // Scene + Camera
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0.2, 3.1);
-    camera.layers.enable(1);
 
     // Group for slab
     const slabGroup = new THREE.Group();
@@ -99,16 +94,16 @@ export default function MetalSlab({
 
     // Slab
     const slab = new THREE.Mesh(geometry, [sideMaterial, topMaterial, sideMaterial]);
-    slab.layers.set(0);
     slabGroup.add(slab);
     slab.position.set(-2.3, 1.0, 0);
     slab.rotation.set(THREE.MathUtils.degToRad(50), THREE.MathUtils.degToRad(-50), 0);
 
-    // Measurements / overlay
+    // Lights
     RectAreaLightUniformsLib.init();
     const bbox = new THREE.Box3().setFromObject(slab);
     const center = bbox.getCenter(new THREE.Vector3());
     const objSize = bbox.getSize(new THREE.Vector3());
+
     const topOverlay = new THREE.Mesh(
       new THREE.PlaneGeometry(objSize.x * 0.985, objSize.z * 0.985),
       new THREE.MeshPhysicalMaterial({
@@ -118,214 +113,167 @@ export default function MetalSlab({
     );
     topOverlay.rotation.x = -Math.PI / 2;
     topOverlay.position.set(0, objSize.y / 2 + 0.001, 0);
-    topOverlay.layers.set(1);
     slab.add(topOverlay);
 
-    // Lights (unchanged)
-    const sideLeft  = new THREE.RectAreaLight(0xffa15a, 28.0, 0.04, objSize.y * 2.0);
+    const sideLeft = new THREE.RectAreaLight(0xffa15a, 28.0, 0.04, objSize.y * 2.0);
     sideLeft.position.set(bbox.min.x - 0.08, center.y, center.z + 0.05);
     sideLeft.rotation.set(0, THREE.MathUtils.degToRad(-78), 0);
-    sideLeft.layers.set(0);
     scene.add(sideLeft);
 
     const sideRight = new THREE.RectAreaLight(0xff9966, 3.2, 0.02, objSize.y * 1.6);
     sideRight.position.set(bbox.max.x + 0.05, center.y, center.z);
     sideRight.rotation.set(0, THREE.MathUtils.degToRad(84), 0);
-    sideRight.layers.set(0);
     scene.add(sideRight);
 
     const topKey = new THREE.RectAreaLight(0xff8a4a, 0.22, objSize.x * 1.35, objSize.z * 1.35);
     topKey.position.set(center.x, bbox.max.y + 0.26, center.z);
     topKey.rotation.set(THREE.MathUtils.degToRad(-90), 0, 0);
-    topKey.layers.set(1);
     scene.add(topKey);
 
-    const edgeGroup = new THREE.Object3D();
-    slab.add(edgeGroup);
-    const edgeTarget = new THREE.Object3D();
-    edgeTarget.position.set(-objSize.x / 2 + 0.025, 0, 0);
-    edgeGroup.add(edgeTarget);
-
-    const leftEdgeRim = new THREE.RectAreaLight(0xffffff, 65.0, 0.024, objSize.y * 1.35);
-    leftEdgeRim.position.set(-objSize.x / 2 - 0.028, 0, 0);
-    leftEdgeRim.lookAt(edgeTarget.getWorldPosition(new THREE.Vector3()));
-    leftEdgeRim.layers.set(0);
-    edgeGroup.add(leftEdgeRim);
-
-    const leftEdgeLine = new THREE.RectAreaLight(0xffffff, 35.0, 0.008, objSize.y * 1.1);
-    leftEdgeLine.position.set(-objSize.x / 2 - 0.021, 0, 0);
-    leftEdgeLine.lookAt(edgeTarget.getWorldPosition(new THREE.Vector3()));
-    leftEdgeLine.layers.set(0);
-    edgeGroup.add(leftEdgeLine);
-
-    const cornerWash = new THREE.SpotLight(0xff9a5c, 3.5, 3.4, THREE.MathUtils.degToRad(55), 0.35, 2.2);
-    cornerWash.castShadow = false;
-    cornerWash.position.set(-objSize.x / 2 - 0.25, objSize.y / 2 + 0.08, +objSize.z * 0.18);
-    const cornerTarget = new THREE.Object3D();
-    cornerTarget.position.set(-objSize.x / 2 + 0.15, objSize.y / 2 - 0.04, +objSize.z * 0.08);
-    slab.add(cornerWash, cornerTarget);
-    cornerWash.target = cornerTarget;
-    cornerWash.layers.set(0);
-
-    const cornerFill = new THREE.RectAreaLight(0xff7a3a, 15.0, 0.22, 0.06);
-    cornerFill.position.set(-objSize.x / 2 - 0.12, objSize.y / 2 - 0.01, +objSize.z * 0.12);
-    cornerFill.rotation.set(THREE.MathUtils.degToRad(-8), THREE.MathUtils.degToRad(-85), 0);
-    cornerFill.layers.set(0);
-    slab.add(cornerFill);
-
-    const rimStrip = new THREE.RectAreaLight(0xffffff, 0.0, objSize.x * 0.4, 0.01);
-    rimStrip.position.set(center.x + objSize.x * 0.18, bbox.max.y - 0.005, center.z + objSize.z * 0.18);
-    rimStrip.rotation.set(THREE.MathUtils.degToRad(-8), THREE.MathUtils.degToRad(-35), 0);
-    rimStrip.layers.set(0);
-    scene.add(rimStrip);
-
-    // Motion
-    const TWO_PI = Math.PI * 2;
+    // Store initial transforms
     const baseGroupPos = slabGroup.position.clone();
-    const baseGroupScale = slabGroup.scale.clone();
     const baseRot = slab.rotation.clone();
     const clock = new THREE.Clock();
-    const floatAmp = 0.06;
-    let spinSmoothed = 0;
-    let progSmoothed = 0;
 
-    const clamp01 = (v) => Math.max(0, Math.min(1, v));
-    const easeInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-
-    const getScrollMetrics = () => {
-      const targetEl = (anchorRef && anchorRef.current) ? anchorRef.current : (mountRef.current ? mountRef.current.parentElement : null);
-      const rect = targetEl ? targetEl.getBoundingClientRect() : null;
-      const vh = window.innerHeight || 1;
-      const stickyPx = (stickyWindowVh / 100) * vh;
-      const sectionPx = rect ? rect.height : (targetEl ? targetEl.clientHeight || vh : vh);
-      // If the section is shorter or equal to the sticky window, use the sticky window as progress length
-      const baseWindow = sectionPx <= stickyPx ? stickyPx : (sectionPx - stickyPx);
-      const totalProgressPx = Math.max(1, baseWindow + Math.max(0, overshootPx));
-      const distanceInto = rect ? Math.max(0, -rect.top) : 0; // start when top hits viewport top
-      return { rect: rect || { top: 0, bottom: 0, height: sectionPx }, vh, stickyPx, sectionPx, totalProgressPx, distanceInto };
-    };
-
-    const computeProgressRaw = () => {
-      const { distanceInto, totalProgressPx } = getScrollMetrics();
-      const stopDistancePx = typeof stopAtPx === "number" && stopAtPx >= 0 ? stopAtPx : totalProgressPx;
-      return distanceInto / Math.max(1, stopDistancePx); // raw, can exceed 1
-    };
-
-    // Loop
+    // Ultra-simple animation loop - everything calculated directly from scroll
+    let hasTransitioned = false;
+    
     const loop = () => {
-      animationIdRef.current = requestAnimationFrame(loop);
+      requestAnimationFrame(loop);
 
-      const dt = clock.getDelta();
-      const t  = clock.elapsedTime;
+      const t = clock.elapsedTime;
+      const scrollY = window.scrollY;
 
-      const pRaw = computeProgressRaw();
-      const pEase = easeInOut(clamp01(pRaw));
-      const stopProgressCap = typeof stopAtProgress === "number" ? clamp01(stopAtProgress) : 1;
-      const pClamped = Math.min(pEase, stopProgressCap);
+      // Calculate progress directly from scroll
+      let progress = 0;
+      let isVisible = false;
+      
+      if (scrollY >= heroTop) {
+        progress = Math.min((scrollY - heroTop) / followDistance, 1);
+        isVisible = true;
+        
+        // Smooth transition to absolute positioning
+        if (progress >= 1) {
+          // Only transition once to prevent glitching
+          if (!hasTransitioned) {
+            containerRef.current.style.position = 'absolute';
+            containerRef.current.style.top = `${scrollY}px`; // Use current scroll position
+            containerRef.current.style.left = '0px';
+            hasTransitioned = true;
+          }
+        } else {
+          // Following viewport
+          if (hasTransitioned) hasTransitioned = false; // Reset for next time
+          containerRef.current.style.position = 'fixed';
+          containerRef.current.style.top = '0px';
+          containerRef.current.style.left = '0px';
+        }
+        containerRef.current.style.opacity = '1';
+      } else {
+        containerRef.current.style.opacity = '0';
+        isVisible = false;
+        hasTransitioned = false; // Reset when going back up
+      }
 
-      // Overshoot window beyond the stop: allow a small extra yaw then ease back
-      const extraWindow = clamp01(overshootWindowProgress);
-      const postStopProgress = clamp01((pEase - stopProgressCap) / Math.max(1e-6, extraWindow));
-      // Shape: up-and-down bump: rises to 1 at middle of window, then back to 0
-      const postStopBump = postStopProgress > 0 ? Math.sin(Math.PI * postStopProgress) : 0;
-      const extraYawRad = THREE.MathUtils.degToRad(overshootYawDeg) * postStopBump;
+      // Always animate - floating should always be visible
+      // Enhanced floating animation with much more pronounced movement
+      const floatY = Math.sin(t * 1.2) * 0.25; // Much bigger primary float
+      const floatBob = Math.sin(t * 0.8) * 0.15; // Bigger secondary bob
+      const hoverTiltX = Math.sin(t * 1.5) * 0.08; // More visible tilt X
+      const hoverTiltZ = Math.cos(t * 1.1) * 0.06; // More visible tilt Z
+      
+      // Always apply floating - this should always work
+      slab.position.y = 1.0 + floatY + floatBob;
 
-      // Spin: finish at max 1.5 turns; never more, plus the overshoot yaw bump
-      const maxTurns = 1.5;
-      const spinTarget = pClamped * Math.min(spins, maxTurns) * TWO_PI + extraYawRad;
-
-      // smoothing (always ease toward target; no snapping at stop)
-      const aSpin = 1 - Math.pow(1 - 0.08, dt * 60);
-      const aProg = 1 - Math.pow(1 - 0.15, dt * 60);
-      spinSmoothed = THREE.MathUtils.lerp(spinSmoothed, spinTarget, aSpin);
-      progSmoothed = THREE.MathUtils.lerp(progSmoothed, pClamped, aProg);
-
-      // float (always keep the gentle hover animation, even after stop)
-      const s = Math.sin(t * 1.2);
-      const floatAmpCurrent = floatAmp;
-      slab.position.y = 1.0 + s * floatAmpCurrent;
-
-      // spin + tilt
-      const addRx = THREE.MathUtils.degToRad(tiltDeg.x) * progSmoothed;
-      const addRz = THREE.MathUtils.degToRad(tiltDeg.z) * progSmoothed;
-      slab.rotation.set(baseRot.x + addRx, baseRot.y + spinSmoothed, baseRot.z + addRz);
-
-      // retreat
-      slabGroup.position.set(
-        baseGroupPos.x,
-        baseGroupPos.y + retreatUpUnits * progSmoothed,
-        baseGroupPos.z - retreatBackUnits * progSmoothed
+      // Direct rotation - buttery smooth with hover tilting
+      const spinAmount = isVisible ? progress * spins * Math.PI * 2 : 0;
+      const scrollTiltX = isVisible ? progress * THREE.MathUtils.degToRad(tiltDeg.x) : 0;
+      const scrollTiltZ = isVisible ? progress * THREE.MathUtils.degToRad(tiltDeg.z) : 0;
+      
+      slab.rotation.set(
+        baseRot.x + scrollTiltX + hoverTiltX,
+        baseRot.y + spinAmount,
+        baseRot.z + scrollTiltZ + hoverTiltZ
       );
-      const sc = THREE.MathUtils.lerp(1, retreatScaleTo, progSmoothed);
-      slabGroup.scale.set(baseGroupScale.x * sc, baseGroupScale.y * sc, baseGroupScale.z * sc);
 
-      // lights
-      const down = Math.max(0, -s);
-      rimStrip.intensity = 0.55 * down;
-      leftEdgeRim.intensity = 45.0 + 8.0 * down;
-      leftEdgeLine.intensity = 25.0 + 4.0 * down;
+      if (isVisible) {
+        // Group transforms with more pronounced hover movement
+        const hoverFloat = Math.sin(t * 0.9) * 0.12; // Much bigger group float
+        slabGroup.position.set(
+          baseGroupPos.x,
+          baseGroupPos.y + retreatUpUnits * progress + hoverFloat,
+          baseGroupPos.z - retreatBackUnits * progress
+        );
+        
+        const scale = 1 - ((1 - retreatScaleTo) * progress);
+        slabGroup.scale.set(scale, scale, scale);
+      } else {
+        // Keep group at base position when not visible
+        const hoverFloat = Math.sin(t * 0.9) * 0.12; // Still add hover float
+        slabGroup.position.set(
+          baseGroupPos.x,
+          baseGroupPos.y + hoverFloat,
+          baseGroupPos.z
+        );
+        slabGroup.scale.set(1, 1, 1);
+      }
 
+      // Always render - even when not visible for debugging
       renderer.render(scene, camera);
     };
     loop();
 
-    // Resize
-    function getMountSize() {
-      const el = mountRef.current;
-      if (!el) {
-        return { w: window.innerWidth || 1, h: window.innerHeight || 1 };
-      }
-      const w = el.clientWidth || el.getBoundingClientRect().width || window.innerWidth || 1;
-      const h = el.clientHeight || el.getBoundingClientRect().height || window.innerHeight || 1;
-      return { w, h };
-    }
+    // Resize handler
     const onResize = () => {
-      if (!rendererRef.current || !mountRef.current) return;
-      const { w, h } = getMountSize();
-      camera.aspect = w / h;
+      camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-      rendererRef.current.setSize(w, h);
+      renderer.setSize(window.innerWidth, window.innerHeight);
     };
-    window.addEventListener("resize", onResize, { passive: true });
-    window.addEventListener("load", onResize, { once: true });
-    const settleId = setTimeout(onResize, 50);
-    // Ensure initial correct size immediately
-    onResize();
+    window.addEventListener("resize", onResize);
 
     // Cleanup
     return () => {
-      clearTimeout(settleId);
       window.removeEventListener("resize", onResize);
-      if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
-      if (rendererRef.current && mountRef.current) {
-        mountRef.current.removeChild(rendererRef.current.domElement);
-        rendererRef.current.dispose();
+      if (renderer.domElement.parentNode) {
+        mountRef.current.removeChild(renderer.domElement);
       }
+      renderer.dispose();
       geometry.dispose();
       topMaterial.dispose();
       sideMaterial.dispose();
       topOverlay.geometry.dispose();
       topOverlay.material.dispose();
     };
-  }, [
-    stickyWindowVh, overshootPx, spins,
-    tiltDeg?.x, tiltDeg?.z, retreatUpUnits, retreatBackUnits, retreatScaleTo,
-    stopAtPx, stopAtProgress, overshootWindowProgress, overshootYawDeg, anchorRef,
-  ]);
+  }, [isMounted, anchorRef, spins, tiltDeg.x, tiltDeg.z, retreatUpUnits, retreatBackUnits, retreatScaleTo, followDistance]);
 
-  // Absolute container that overlays its parent section without affecting layout
+  // Don't render anything until mounted on client
+  if (!isMounted) {
+    return null;
+  }
+
   return (
     <div
-      ref={mountRef}
-      className={className}
+      ref={containerRef}
       style={{
-        position: "absolute",
-        inset: 0,
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
         zIndex: 50,
-        background: "transparent",
-        overflow: "hidden",
+        opacity: 0,
         pointerEvents: "none",
+        overflow: "visible",
       }}
-    />
+    >
+      <div
+        ref={mountRef}
+        style={{
+          width: "100%",
+          height: "100%",
+          overflow: "visible",
+        }}
+      />
+    </div>
   );
 }

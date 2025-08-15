@@ -19,7 +19,7 @@ export const metadata = {
 };
 
 // Toggle this flag to show/hide the in-progress screen
-const SHOW_IN_PROGRESS = true;
+const SHOW_IN_PROGRESS = false;
 
 export default function RootLayout({ children }) {
   if (SHOW_IN_PROGRESS) {

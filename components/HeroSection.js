@@ -16,16 +16,13 @@ export default function HeroSection() {
   return (
     <section
       ref={heroSectionRef}
-      className="relative w-full h-screen flex flex-col items-center justify-end z-0 px-4 sm:px-8 overflow-hidden"
+      className="relative w-full h-screen flex flex-col items-center justify-end z-0 px-4 sm:px-8"
     >
       <MetalSlab
-        // Absolute overlay inside the section; doesn't affect layout
         anchorRef={heroSectionRef}
-        stickyWindowVh={100}
-        overshootPx={0}
-        spins={0.2}
-        tiltDeg={{ x: 12, z: 7 }}
-        stopAtProgress={1}
+        followDistance={800} // Follow for 800px after hero section
+        spins={0.7} 
+        tiltDeg={{ x: 16, z: 10 }}
       />
 
       <div className="w-full flex flex-col items-center justify-end">
