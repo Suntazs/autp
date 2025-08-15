@@ -9,10 +9,10 @@ import TestimonialSection from "@/components/TestimonialSection";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center relative bg-neutral-950">
+    <main className="flex min-h-screen flex-col items-center relative bg-black">
       <HeroSection />
       
-        ]
+        
         
         {/* First Testimonial - You can customize all these props */}
         <TestimonialSection 
@@ -23,7 +23,7 @@ export default function Home() {
           reviewerPicture="/img/an-elderly-man-with-gray-hair-and-wearing-glasses-.png"
           reviewerName="Henry Modisett"
           reviewerRole="Head of Design"
-          sectionId="testimonial-1"
+          sectionId="testimonioal-1"
         />
 
         <BlogSlider />

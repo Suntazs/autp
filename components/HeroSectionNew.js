@@ -7,8 +7,7 @@ import dynamic from "next/dynamic";
 const MetalSlab = dynamic(() => import("@/components/ui/MetalSlab"), { ssr: false });
 
 export default function HeroSectionNew() {
-  // Remove the type argument from useRef to avoid error
-  const heroSectionRef = useRef(null);
+  const heroSectionRef = useRef<HTMLElement | null>(null);
   const [mounted, setMounted] = useState(true); // set true if you always want it visible
 
   useEffect(() => {

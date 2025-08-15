@@ -5,19 +5,24 @@ import * as THREE from "three";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 
 export default function MetalSlab({
-  sectionHeight = 160,      // total block height (vh)
-  stickyWindowVh = 100,     // scroll window for the effect
-  overshootPx = 400,        // tiny bit past 100vh (progress only, not layout)
-  spins = 1.5,              // cap at 1.5 turns total
-  tiltDeg = { x: 10, z: 6 },// tilt kept gentle
+  sectionHeight = 100,      // kept for backward-compat; not used in overlay mode
+  stickyWindowVh = 100,     // scroll window for the effect when using anchor
+  overshootPx = null,        // tiny bit past 100vh (progress only)
+  spins = 0.7,              // cap at 1.5 turns total
+  tiltDeg = { x: 16, z: 10 },// tilt kept gentle
   retreatUpUnits = 1.2,     // slide up more
   retreatBackUnits = 1.5,   // push back more
   retreatScaleTo = 0.95,    // shrink a touch more
-  overscanPct = 10,
+  // Motion controls
+  stopAtPx = null,          // optional absolute px distance to stop the motion
+  stopAtProgress = 1,       // clamp 0..1; where along the progress to stop
+  overshootWindowProgress = 0.2, // 0..1 of progress past the stop used to overshoot+return
+  overshootYawDeg = 8,      // max extra yaw during overshoot (degrees)
+  // New: external anchor that defines the scroll window; slab itself is overlay
+  anchorRef = null,
   className = "",
-  children,
+  children, // accepted for backward-compat but not rendered in overlay mode
 }) {
-  const sectionRef = useRef(null);
   const mountRef   = useRef(null);
   const rendererRef = useRef(null);
   const animationIdRef = useRef(null);
@@ -187,13 +192,23 @@ export default function MetalSlab({
     const clamp01 = (v) => Math.max(0, Math.min(1, v));
     const easeInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 
-    const computeProgress = () => {
-      if (!sectionRef.current) return 0;
-      const rect = sectionRef.current.getBoundingClientRect();
-      const vh = window.innerHeight;
-      const windowPx = (stickyWindowVh / 100) * vh + overshootPx; // progress only
-      const distanceInto = Math.max(0, -rect.top);
-      return clamp01(distanceInto / Math.max(1, windowPx));
+    const getScrollMetrics = () => {
+      const targetEl = (anchorRef && anchorRef.current) ? anchorRef.current : (mountRef.current ? mountRef.current.parentElement : null);
+      const rect = targetEl ? targetEl.getBoundingClientRect() : null;
+      const vh = window.innerHeight || 1;
+      const stickyPx = (stickyWindowVh / 100) * vh;
+      const sectionPx = rect ? rect.height : (targetEl ? targetEl.clientHeight || vh : vh);
+      // If the section is shorter or equal to the sticky window, use the sticky window as progress length
+      const baseWindow = sectionPx <= stickyPx ? stickyPx : (sectionPx - stickyPx);
+      const totalProgressPx = Math.max(1, baseWindow + Math.max(0, overshootPx));
+      const distanceInto = rect ? Math.max(0, -rect.top) : 0; // start when top hits viewport top
+      return { rect: rect || { top: 0, bottom: 0, height: sectionPx }, vh, stickyPx, sectionPx, totalProgressPx, distanceInto };
+    };
+
+    const computeProgressRaw = () => {
+      const { distanceInto, totalProgressPx } = getScrollMetrics();
+      const stopDistancePx = typeof stopAtPx === "number" && stopAtPx >= 0 ? stopAtPx : totalProgressPx;
+      return distanceInto / Math.max(1, stopDistancePx); // raw, can exceed 1
     };
 
     // Loop
@@ -203,22 +218,32 @@ export default function MetalSlab({
       const dt = clock.getDelta();
       const t  = clock.elapsedTime;
 
-      const p = computeProgress();
-      const pEase = easeInOut(p);
+      const pRaw = computeProgressRaw();
+      const pEase = easeInOut(clamp01(pRaw));
+      const stopProgressCap = typeof stopAtProgress === "number" ? clamp01(stopAtProgress) : 1;
+      const pClamped = Math.min(pEase, stopProgressCap);
 
-      // Spin: finish at max 1.5 turns; never more
+      // Overshoot window beyond the stop: allow a small extra yaw then ease back
+      const extraWindow = clamp01(overshootWindowProgress);
+      const postStopProgress = clamp01((pEase - stopProgressCap) / Math.max(1e-6, extraWindow));
+      // Shape: up-and-down bump: rises to 1 at middle of window, then back to 0
+      const postStopBump = postStopProgress > 0 ? Math.sin(Math.PI * postStopProgress) : 0;
+      const extraYawRad = THREE.MathUtils.degToRad(overshootYawDeg) * postStopBump;
+
+      // Spin: finish at max 1.5 turns; never more, plus the overshoot yaw bump
       const maxTurns = 1.5;
-      const spinTarget = pEase * Math.min(spins, maxTurns) * TWO_PI;
+      const spinTarget = pClamped * Math.min(spins, maxTurns) * TWO_PI + extraYawRad;
 
-      // smoothing
+      // smoothing (always ease toward target; no snapping at stop)
       const aSpin = 1 - Math.pow(1 - 0.08, dt * 60);
       const aProg = 1 - Math.pow(1 - 0.15, dt * 60);
       spinSmoothed = THREE.MathUtils.lerp(spinSmoothed, spinTarget, aSpin);
-      progSmoothed = THREE.MathUtils.lerp(progSmoothed, pEase, aProg);
+      progSmoothed = THREE.MathUtils.lerp(progSmoothed, pClamped, aProg);
 
-      // float
+      // float (always keep the gentle hover animation, even after stop)
       const s = Math.sin(t * 1.2);
-      slab.position.y = 1.0 + s * floatAmp;
+      const floatAmpCurrent = floatAmp;
+      slab.position.y = 1.0 + s * floatAmpCurrent;
 
       // spin + tilt
       const addRx = THREE.MathUtils.degToRad(tiltDeg.x) * progSmoothed;
@@ -247,7 +272,12 @@ export default function MetalSlab({
     // Resize
     function getMountSize() {
       const el = mountRef.current;
-      return { w: el.clientWidth, h: el.clientHeight };
+      if (!el) {
+        return { w: window.innerWidth || 1, h: window.innerHeight || 1 };
+      }
+      const w = el.clientWidth || el.getBoundingClientRect().width || window.innerWidth || 1;
+      const h = el.clientHeight || el.getBoundingClientRect().height || window.innerHeight || 1;
+      return { w, h };
     }
     const onResize = () => {
       if (!rendererRef.current || !mountRef.current) return;
@@ -259,6 +289,8 @@ export default function MetalSlab({
     window.addEventListener("resize", onResize, { passive: true });
     window.addEventListener("load", onResize, { once: true });
     const settleId = setTimeout(onResize, 50);
+    // Ensure initial correct size immediately
+    onResize();
 
     // Cleanup
     return () => {
@@ -276,44 +308,24 @@ export default function MetalSlab({
       topOverlay.material.dispose();
     };
   }, [
-    sectionHeight, stickyWindowVh, overshootPx, spins,
-    tiltDeg?.x, tiltDeg?.z, retreatUpUnits, retreatBackUnits, retreatScaleTo
+    stickyWindowVh, overshootPx, spins,
+    tiltDeg?.x, tiltDeg?.z, retreatUpUnits, retreatBackUnits, retreatScaleTo,
+    stopAtPx, stopAtProgress, overshootWindowProgress, overshootYawDeg, anchorRef,
   ]);
 
-  // overscan box to avoid any side seams — clipped by overflow:hidden on mount
-  const overscanInset = {
-    top: `-${overscanPct}vh`,
-    right: `-${overscanPct}vw`,
-    bottom: `-${overscanPct}vh`,
-    left: `-${overscanPct}vw`,
-  };
-
+  // Absolute container that overlays its parent section without affecting layout
   return (
-    <section
-      ref={sectionRef}
-      className={`relative w-full ${className}`}
-      style={{ height: `${sectionHeight}vh` }}
-    >
-      {/* Sticky overlay ABOVE content; exact 100vh, won’t push layout */}
-      <div className="sticky top-0 w-full h-screen pointer-events-none" style={{ zIndex: 30 }}>
-        <div
-          ref={mountRef}
-          style={{
-            position: "absolute",
-            top: overscanInset.top,
-            right: overscanInset.right,
-            bottom: overscanInset.bottom,
-            left: overscanInset.left,
-            background: "transparent",
-            overflow: "hidden", // prevents overscan from creating scrollbars
-          }}
-        />
-      </div>
-
-      {/* Normal-flow content under the slab */}
-      <div className="relative z-0">
-        {children}
-      </div>
-    </section>
+    <div
+      ref={mountRef}
+      className={className}
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 50,
+        background: "transparent",
+        overflow: "hidden",
+        pointerEvents: "none",
+      }}
+    />
   );
 }
